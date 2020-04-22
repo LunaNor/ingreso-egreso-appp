@@ -9,13 +9,20 @@ import * as authActions from '../auth/auth.actions';
 import { map } from 'rxjs/operators';
 import { Usuario } from '../models/usuario.model';
 import { Subscription } from 'rxjs';
+import * as ingresoEgresoActions from '../ingreso-egreso/ingreso-egreso.actions';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
-  userSuscription: Subscription;
+  userSuscription = new Subscription;
+  private _user: Usuario;
+
+
+  get user() {
+    return this._user;
+  }
 
   constructor(public auth: AngularFireAuth,
               private firestore: AngularFirestore,
@@ -28,21 +35,22 @@ export class AuthService {
     this.auth.authState.subscribe( fuser => {
       //console.log( fuser?.uid ) // si esto existe lo imprime
       if ( fuser ) {
-        console.log('Existe');
         // existe
         this.userSuscription = this.firestore.doc(`${ fuser.uid}/usuario`).valueChanges()
           .subscribe( (firestoreUser: any) => {
   
             const user = Usuario.fromfireBase( firestoreUser );
-
+            this._user = user;
             this.store.dispatch( authActions.setUser({ user }));
           });
       
       } else {
         // no existe
-        console.log('No Existe');
+        this._user = null;
         this.userSuscription.unsubscribe();
         this.store.dispatch( authActions.unSetUser());
+        this.store.dispatch( ingresoEgresoActions.unSetItems());
+
       }
     });
 
